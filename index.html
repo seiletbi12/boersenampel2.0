@@ -215,16 +215,13 @@
                 <div class="debug-info" id="spx-debug"></div>
             </div>
 
-            <!-- VIX (VIXY ETF) -->
+            <!-- VIX -->
             <div class="card">
-                <h3>VIX <span style="font-size: 0.7rem; background: #a855f7; padding: 2px 6px; border-radius: 4px;">VIXY ETF</span></h3>
+                <h3>VIX <span id="vix-symbol" style="font-size: 0.7rem; background: #a855f7; padding: 2px 6px; border-radius: 4px;">^VIX</span></h3>
                 <div class="price" id="vix-price">-</div>
                 <div class="price-change" id="vix-change">-</div>
                 <div class="source-link">
                     Überprüfung: <a href="https://feargreedmeter.com/" target="_blank">Fear & Greed Meter</a>
-                </div>
-                <div style="font-size: 0.75rem; color: #64748b; margin-top: 5px;">
-                    Hinweis: Es wird der VIXY ETF (VIX) angezeigt
                 </div>
                 <div class="debug-info" id="vix-debug"></div>
             </div>
@@ -486,12 +483,13 @@
                     document.getElementById('debug-output').textContent += 'S&P 500: NICHT GEFUNDEN\n';
                 }
 
-                // VIXY/VIX Daten
+                // VIX Daten
                 let vixPrice = null, vixChange = null, vixChangePct = null;
                 if (data.vix && data.vix.price !== undefined) {
                     vixPrice = data.vix.price;
                     vixChange = data.vix.change || 0;
                     vixChangePct = data.vix.changePercent || 0;
+                    document.getElementById('vix-symbol').textContent = data.vix.symbol || '^VIX';
                     document.getElementById('vix-price').textContent = formatNumber(vixPrice);
                     document.getElementById('vix-change').innerHTML = formatChange(vixChange, vixChangePct);
                     document.getElementById('vix-debug').textContent = 'OK';
