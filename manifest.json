@@ -1,0 +1,29 @@
+{
+  "name": "Börsenampel",
+  "short_name": "Börsenampel",
+  "description": "Echtzeit-Marktcheck mit Ampel-System für S&P 500, VIX und Fear & Greed Index",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1f2937",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik01MCAzMFMzMCA1MFYzMFMzMCAzMFY1MEg1MFYzMFY1MEg1MFYzMFMzMCA1MFY1MEg1MFYzMFY1MFYzMFMzMCA1MEg1MFYzMEg1MFYzMFY1MFM1MCAzMFY1MEg1MFYzMFY1MCIgZmlsbD0iIzM3NDExNSIvPgo8L3N2Zz4K",
+      "sizes": "100x100",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkwIiBoZWlnaHQ9IjE5MCIgdmlld0JveD0iMCAwIDE5MCAxOTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik02Ny41IDg3LjVIMjAuNUM0Mi41IDg3LjUgMzEuNSA2NC41IDMxLjUgNDMuNUMyMC41IDY0LjUgNDMuNSA4Ny41IDY3LjUgODcuNVYxMjAuNUM2Ny41IDEyMC41IDY3LjUgMTQzLjUgNDMuNSAxNDMuNUMyMC41IDE0My41IDMxLjUgMTQzLjUgMzEuNSAxMjAuNVY4Ny41SDEyMC41Vjg3LjVIMjAuNVYxMjAuNUM0Mi41IDEyMC41IDMxLjUgMTQzLjUgMzEuNSAxMjAuNVY4Ny41SDEyMC41Vjg3LjVIMzEuNVYxMjAuNUM2Ny41IDEyMC41IDY3LjUgODcuNSIgZmlsbD0iIzM3NDExNSIvPgo8L3N2Zz4K",
+      "sizes": "190x190",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTUyIiBoZWlnaHQ9IjU1MiIgdmlld0JveD0iMCAwIDU1MiA1NTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0zMjAuNSA0ODIuNUM0NzUuNSA0ODIuNSA1MjAuNSA0MjguNSA1MjAuNSA0MjguNUMyMjAuNSA0MjguNSA0NzUuNSA0MjguNSAzMjAuNSA0ODIuNVY1MjguNUMzMjAuNSA1MjguNSAzMjAuNSA1NTIuNSA0NzUuNSA1NTIuNSA0NzUuNSAzMjAuNSA1NTIuNVY0MjguNUMzMjAuNSA0MjguNSA0NzUuNSA0MjguNSAzMjAuNSA0ODIuNSIgZmlsbD0iIzM3NDExNSIvPgo8L3N2Zz4K",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
