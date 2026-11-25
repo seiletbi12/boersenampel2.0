@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Börsenampel v2.2 - Twelve Data + CNN</title>
+    <meta name="description" content="Täglicher Markt-Check mit Ampel-System und Live-Daten von Twelve Data und CNN">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #1e293b;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { font-size: 1.8rem; margin-bottom: 10px; }
+        h2 { font-size: 1.3rem; margin-bottom: 15px; color: #94a3b8; }
+        h3 { font-size: 1.1rem; margin-bottom: 10px; }
+        .card {
+            background: #334155;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .ampel-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        .ampel {
+            width: 80px;
+            height: 200px;
+            background: #475569;
+            border-radius: 10px;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        .ampel-light {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 10px auto;
+            transition: all 0.3s ease;
+        }
+        .ampel-rot { background: #ef4444; box-shadow: 0 0 20px #ef4444; }
+        .ampel-gelb { background: #f59e0b; box-shadow: 0 0 20px #f59e0b; }
+        .ampel-gruen { background: #22c55e; box-shadow: 0 0 20px #22c55e; }
+        .ampel-off { background: #475569; opacity: 0.5; }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+        .price { font-size: 2rem; font-weight: bold; }
+        .price-change { font-size: 1rem; margin-top: 5px; }
+        .change-positive { color: #22c55e; }
+        .change-negative { color: #ef4444; }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #2563eb; }
+        .btn:active { background: #1d4ed8; }
+        .status-open { color: #22c55e; }
+        .status-closed { color: #ef4444; }
+        .status-weekend { color: #f59e0b; }
+        .source-link {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 8px;
+            display: block;
+        }
+        .source-link a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        .source-link a:hover {
+            text-decoration: underline;
+        }
+        .debug-info {
+            font-size: 0.7rem;
+            color: #f59e0b;
+            margin-top: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        /* Slider Styling */
+        .slider-container {
+            margin: 15px 0;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        .slider-value {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #475569;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #475569;
+            border-radius: 4px;
+        }
+        input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #475569;
+            border-radius: 4px;
+            border: none;
+        }
+        
+        .version-badge {
+            background: #3b82f6;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+        .loading {
+            color: #f59e0b;
+            font-style: italic;
+        }
+        .error {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="text-center mb-6">
+            <h1>📊 Börsenampel <span class="version-badge">v2.2 - Twelve Data + CNN</span></h1>
+            <p class="text-sm" id="lastUpdate">Letzte Aktualisierung: -</p>
+        </header>
+
+        <!-- Ampel -->
+        <div class="card">
+            <h2>🚦 Marktstimmung</h2>
+            <div class="ampel-container">
+                <div class="ampel">
+                    <div id="ampel-rot" class="ampel-light ampel-off"></div>
+                    <div id="ampel-gelb" class="ampel-light ampel-off"></div>
+                    <div id="ampel-gruen" class="ampel-light ampel-off"></div>
+                </div>
+                <div>
+                    <div id="ampel-text" class="price">Lädt...</div>
+                    <p id="ampel-reason" style="color: #94a3b8; font-size: 0.9rem; margin-top: 5px;">Warte auf Daten...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Daten Grid -->
+        <div class="grid">
+            <!-- S&P 500 (SPY ETF) -->
+            <div class="card">
+                <h3>S&P 500 <span style="font-size: 0.7rem; background: #3b82f6; padding: 2px 6px; border-radius: 4px;">SPY ETF</span></h3>
+                <div class="price" id="spx-price">-</div>
+                <div class="price-change" id="spx-change">-</div>
+                <div class="source-link">
+                    Überprüfung: <a href="https://feargreedmeter.com/" target="_blank">Fear & Greed Meter</a>
+                </div>
+                <div style="font-size: 0.75rem; color: #64748b; margin-top: 5px;">
+                    Hinweis: Es wird der SPY ETF (S&P 500) angezeigt
+                </div>
+                <div class="debug-info" id="spx-debug"></div>
+            </div>
+
+            <!-- VIX (VIXY ETF) -->
+            <div class="card">
+                <h3>VIX <span style="font-size: 0.7rem; background: #a855f7; padding: 2px 6px; border-radius: 4px;">VIXY ETF</span></h3>
+                <div class="price" id="vix-price">-</div>
+                <div class="price-change" id="vix-change">-</div>
+                <div class="source-link">
+                    Überprüfung: <a href="https://feargreedmeter.com/" target="_blank">Fear & Greed Meter</a>
+                </div>
+                <div style="font-size: 0.75rem; color: #64748b; margin-top: 5px;">
+                    Hinweis: Es wird der VIXY ETF (VIX) angezeigt
+                </div>
+                <div class="debug-info" id="vix-debug"></div>
+            </div>
+
+            <!-- Fear & Greed Index -->
+            <div class="card">
+                <h3>Fear & Greed Index <span style="font-size: 0.7rem; background: #f97316; padding: 2px 6px; border-radius: 4px;">CNN</span></h3>
+                <div class="price" id="fng-value">-</div>
+                <div style="font-size: 1.2rem; color: #e2e8f0;" id="fng-text">-</div>
+                <div class="source-link">
+                    Quelle: <a href="https://edition.cnn.com/markets/fear-and-greed" target="_blank">CNN Fear & Greed</a>
+                </div>
+                <div class="debug-info" id="fng-debug"></div>
+            </div>
+
+            <!-- Marktstatus -->
+            <div class="card">
+                <h3>Marktstatus</h3>
+                <div style="text-align: center; font-size: 3rem;" id="marktstatus-emoji">🕒</div>
+                <div style="text-align: center; font-size: 1.2rem; margin: 10px 0;" id="marktstatus-text">Lädt...</div>
+                <div style="text-align: center; color: #94a3b8; font-size: 0.9rem;" id="marktstatus-next">-</div>
+            </div>
+        </div>
+
+        <!-- Debug Info -->
+        <div class="card" id="debug-card" style="display: none;">
+            <h2>🐛 Debug-Informationen</h2>
+            <div class="debug-info" id="debug-output"></div>
+            <button onclick="toggleDebug()" class="btn" style="margin-top: 10px;">🔍 Debug ausblenden</button>
+        </div>
+
+        <!-- Aktualisierungs-Button -->
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="loadAllData()" class="btn">🔄 Daten aktualisieren</button>
+            <button onclick="toggleDebug()" class="btn" style="margin-left: 10px; background: #f59e0b;">🐛 Debug anzeigen</button>
+        </div>
+
+        <!-- Schwellenwerte als Slider -->
+        <div class="card">
+            <h2>⚙️ Ampel-Schwellenwerte anpassen</h2>
+            
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>VIX Grün (niedrig)</span>
+                    <span id="vix-green-value" class="slider-value">15</span>
+                </div>
+                <input type="range" id="vix-green" min="5" max="40" value="15" step="1" oninput="updateSliderValue('vix-green', this.value)">
+            </div>
+            
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>VIX Gelb (mittel)</span>
+                    <span id="vix-yellow-value" class="slider-value">20</span>
+                </div>
+                <input type="range" id="vix-yellow" min="10" max="50" value="20" step="1" oninput="updateSliderValue('vix-yellow', this.value)">
+            </div>
+            
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Fear & Greed Grün (hoch)</span>
+                    <span id="fng-green-value" class="slider-value">70</span>
+                </div>
+                <input type="range" id="fng-green" min="50" max="100" value="70" step="1" oninput="updateSliderValue('fng-green', this.value)">
+            </div>
+            
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Fear & Greed Gelb (neutral)</span>
+                    <span id="fng-yellow-value" class="slider-value">40</span>
+                </div>
+                <input type="range" id="fng-yellow" min="20" max="80" value="40" step="1" oninput="updateSliderValue('fng-yellow', this.value)">
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="saveThresholds()" class="btn" style="background: #22c55e;">💾 Schwellenwerte speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log(err));
+            });
+        }
+    </script>
+
+    <script>
+        // Worker URL
+        const WORKER_URL = 'https://boersenampelproxyy.tobseil87.workers.dev/';
+
+        // Standard-Schwellenwerte
+        let thresholds = {
+            vixGreen: 15,
+            vixYellow: 20,
+            fngGreen: 70,
+            fngYellow: 40
+        };
+
+        // Debug anzeigen/verstecken
+        function toggleDebug() {
+            const debugCard = document.getElementById('debug-card');
+            if (debugCard.style.display === 'none') {
+                debugCard.style.display = 'block';
+            } else {
+                debugCard.style.display = 'none';
+            }
+        }
+
+        // Slider-Werte aktualisieren
+        function updateSliderValue(id, value) {
+            document.getElementById(`${id}-value`).textContent = value;
+        }
+
+        // Lade gespeicherte Schwellenwerte
+        function loadThresholds() {
+            const saved = localStorage.getItem('boersenampelThresholds');
+            if (saved) {
+                thresholds = JSON.parse(saved);
+                document.getElementById('vix-green').value = thresholds.vixGreen;
+                document.getElementById('vix-yellow').value = thresholds.vixYellow;
+                document.getElementById('fng-green').value = thresholds.fngGreen;
+                document.getElementById('fng-yellow').value = thresholds.fngYellow;
+                document.getElementById('vix-green-value').textContent = thresholds.vixGreen;
+                document.getElementById('vix-yellow-value').textContent = thresholds.vixYellow;
+                document.getElementById('fng-green-value').textContent = thresholds.fngGreen;
+                document.getElementById('fng-yellow-value').textContent = thresholds.fngYellow;
+            }
+        }
+
+        // Speichere Schwellenwerte
+        function saveThresholds() {
+            thresholds = {
+                vixGreen: parseInt(document.getElementById('vix-green').value) || 15,
+                vixYellow: parseInt(document.getElementById('vix-yellow').value) || 20,
+                fngGreen: parseInt(document.getElementById('fng-green').value) || 70,
+                fngYellow: parseInt(document.getElementById('fng-yellow').value) || 40
+            };
+            localStorage.setItem('boersenampelThresholds', JSON.stringify(thresholds));
+            alert('Schwellenwerte gespeichert!');
+            loadAllData();
+        }
+
+        // Lade Marktstatus
+        function getMarktStatus() {
+            const now = new Date();
+            const marketOpenStart = 15; // 15:30 MEZ
+            const marketOpenEnd = 22;   // 22:00 MEZ
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+
+            let isOpen = false;
+            let statusText = '';
+            let emoji = '🕒';
+            let cssClass = '';
+
+            if (!isWeekend) {
+                if ((currentHour > marketOpenStart || (currentHour === marketOpenStart && currentMinute >= 30)) &&
+                    (currentHour < marketOpenEnd || (currentHour === marketOpenEnd && currentMinute <= 0))) {
+                    isOpen = true;
+                    statusText = 'Geöffnet';
+                    emoji = '🏢';
+                    cssClass = 'status-open';
+                } else {
+                    statusText = 'Geschlossen';
+                    emoji = '🌃';
+                    cssClass = 'status-closed';
+                }
+            } else {
+                statusText = 'Wochenende';
+                emoji = '📅';
+                cssClass = 'status-weekend';
+            }
+
+            const nextOpen = !isOpen && !isWeekend ?
+                (currentHour < marketOpenStart || (currentHour === marketOpenStart && currentMinute < 30)) ?
+                `Öffnet heute um ${marketOpenStart}:30 MEZ` :
+                `Öffnet morgen um ${marketOpenStart}:30 MEZ` :
+                '';
+
+            return { isOpen, text: statusText, emoji, nextOpen, cssClass };
+        }
+
+        // Format Number Helper
+        function formatNumber(num) {
+            if (num === null || num === undefined) return '-';
+            return num.toFixed(2);
+        }
+
+        // Format Change Helper
+        function formatChange(change, changePct) {
+            if (change === null || change === undefined || changePct === null || changePct === undefined) return '-';
+            const sign = change >= 0 ? '+' : '';
+            const signPct = changePct >= 0 ? '+' : '';
+            const color = change >= 0 ? 'change-positive' : 'change-negative';
+            return `<span class="${color}">${sign}${formatNumber(change)} (${signPct}${formatNumber(changePct)}%)</span>`;
+        }
+
+        // Lade alle Daten vom Worker
+        async function loadAllData() {
+            try {
+                // Lädt... anzeigen
+                document.getElementById('ampel-text').textContent = 'Lädt...';
+                document.getElementById('ampel-reason').textContent = 'Daten werden geladen...';
+                document.getElementById('spx-price').textContent = 'Lädt...';
+                document.getElementById('spx-change').textContent = '';
+                document.getElementById('vix-price').textContent = 'Lädt...';
+                document.getElementById('vix-change').textContent = '';
+                document.getElementById('fng-value').textContent = 'Lädt...';
+                document.getElementById('fng-text').textContent = '';
+                document.getElementById('spx-debug').textContent = '';
+                document.getElementById('vix-debug').textContent = '';
+                document.getElementById('fng-debug').textContent = '';
+                document.getElementById('debug-output').textContent = `Worker-URL: ${WORKER_URL}\n\n`;
+
+                // Marktstatus
+                const status = getMarktStatus();
+                document.getElementById('marktstatus-emoji').textContent = status.emoji;
+                document.getElementById('marktstatus-text').textContent = status.text;
+                document.getElementById('marktstatus-text').className = status.cssClass;
+                document.getElementById('marktstatus-next').textContent = status.nextOpen;
+
+                // Lade alles vom Worker
+                document.getElementById('debug-output').textContent += 'Lade Daten vom Worker...\n';
+                
+                const response = await fetch(WORKER_URL + '?cachebuster=' + Date.now(), { 
+                    cache: 'no-store',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                document.getElementById('debug-output').textContent += `Response Status: ${response.status}\n`;
+                
+                if (!response.ok) {
+                    throw new Error(`Worker-Response: ${response.status} - ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                document.getElementById('debug-output').textContent += `Worker-Daten: ${JSON.stringify(data, null, 2)}\n`;
+
+                // Debug: Zeige rohe Daten
+                console.log('Worker Daten:', data);
+
+                // SPY/S&P 500 Daten
+                let spxPrice = null, spxChange = null, spxChangePct = null;
+                if (data.sp500 && data.sp500.price !== undefined) {
+                    spxPrice = data.sp500.price;
+                    spxChange = data.sp500.change || 0;
+                    spxChangePct = data.sp500.changePercent || 0;
+                    document.getElementById('spx-price').textContent = formatNumber(spxPrice);
+                    document.getElementById('spx-change').innerHTML = formatChange(spxChange, spxChangePct);
+                    document.getElementById('spx-debug').textContent = 'OK';
+                    document.getElementById('debug-output').textContent += 'S&P 500: OK\n';
+                } else {
+                    document.getElementById('spx-price').textContent = 'Fehler';
+                    document.getElementById('spx-debug').textContent = 'Daten nicht verfügbar';
+                    document.getElementById('debug-output').textContent += 'S&P 500: NICHT GEFUNDEN\n';
+                }
+
+                // VIXY/VIX Daten
+                let vixPrice = null, vixChange = null, vixChangePct = null;
+                if (data.vix && data.vix.price !== undefined) {
+                    vixPrice = data.vix.price;
+                    vixChange = data.vix.change || 0;
+                    vixChangePct = data.vix.changePercent || 0;
+                    document.getElementById('vix-price').textContent = formatNumber(vixPrice);
+                    document.getElementById('vix-change').innerHTML = formatChange(vixChange, vixChangePct);
+                    document.getElementById('vix-debug').textContent = 'OK';
+                    document.getElementById('debug-output').textContent += 'VIX: OK\n';
+                } else {
+                    document.getElementById('vix-price').textContent = 'Fehler';
+                    document.getElementById('vix-debug').textContent = 'Daten nicht verfügbar';
+                    document.getElementById('debug-output').textContent += 'VIX: NICHT GEFUNDEN\n';
+                }
+
+                // Fear & Greed Daten
+                let fngScore = null, fngRating = null;
+                if (data.fearGreed && data.fearGreed.score !== undefined) {
+                    fngScore = data.fearGreed.score;
+                    fngRating = data.fearGreed.rating || data.fearGreed.valueText || '-';
+                    document.getElementById('fng-value').textContent = Math.round(fngScore);
+                    document.getElementById('fng-text').textContent = fngRating;
+                    document.getElementById('fng-debug').textContent = 'OK';
+                    document.getElementById('debug-output').textContent += `Fear & Greed: OK (${fngScore}, ${fngRating})\n`;
+                } else if (data.fearGreed && data.fearGreed.value !== undefined) {
+                    // Fallback für alternative Struktur
+                    fngScore = data.fearGreed.value;
+                    fngRating = data.fearGreed.rating || data.fearGreed.text || '-';
+                    document.getElementById('fng-value').textContent = Math.round(fngScore);
+                    document.getElementById('fng-text').textContent = fngRating;
+                    document.getElementById('fng-debug').textContent = 'OK (Fallback)';
+                    document.getElementById('debug-output').textContent += `Fear & Greed: OK (Fallback: ${fngScore})\n`;
+                } else {
+                    document.getElementById('fng-value').textContent = 'Fehler';
+                    document.getElementById('fng-text').textContent = '';
+                    document.getElementById('fng-debug').textContent = 'Daten nicht verfügbar';
+                    document.getElementById('debug-output').textContent += 'Fear & Greed: NICHT GEFUNDEN\n';
+                }
+
+                // Aktualisierungszeit
+                if (data.fetchedAt) {
+                    const date = new Date(data.fetchedAt);
+                    document.getElementById('lastUpdate').textContent = `Letzte Aktualisierung: ${date.toLocaleString('de-DE')}`;
+                } else {
+                    document.getElementById('lastUpdate').textContent = `Letzte Aktualisierung: ${new Date().toLocaleString('de-DE')}`;
+                }
+
+                // Ampel aktualisieren
+                const vixValue = vixPrice !== null ? vixPrice : 0;
+                const fngValue = fngScore !== null ? fngScore : 50;
+                
+                document.getElementById('debug-output').textContent += `Ampel-Berechnung: VIX=${vixValue}, F&G=${fngValue}\n`;
+                document.getElementById('debug-output').textContent += `Schwellenwerte: VIX-Grün=${thresholds.vixGreen}, VIX-Gelb=${thresholds.vixYellow}, F&G-Grün=${thresholds.fngGreen}, F&G-Gelb=${thresholds.fngYellow}\n`;
+                
+                if (vixValue && fngValue) {
+                    updateAmpel(vixValue, fngValue);
+                } else {
+                    document.getElementById('ampel-text').textContent = '❌ Keine Daten';
+                    document.getElementById('ampel-reason').textContent = 'VIX oder Fear & Greed nicht verfügbar';
+                }
+
+            } catch (error) {
+                console.error('Fehler:', error);
+                document.getElementById('ampel-text').textContent = '❌ Fehler';
+                document.getElementById('ampel-reason').textContent = 'Fehler: ' + error.message;
+                document.getElementById('spx-price').textContent = 'Fehler';
+                document.getElementById('vix-price').textContent = 'Fehler';
+                document.getElementById('fng-value').textContent = 'Fehler';
+                document.getElementById('debug-output').textContent = 'FEHLER: ' + error.message + '\n' + (error.stack || '');
+            }
+        }
+
+        // Aktualisiere Ampel
+        function updateAmpel(vixValue, fngValue) {
+            // Reset
+            document.getElementById('ampel-rot').className = 'ampel-light ampel-off';
+            document.getElementById('ampel-gelb').className = 'ampel-light ampel-off';
+            document.getElementById('ampel-gruen').className = 'ampel-light ampel-off';
+
+            let color = '';
+            let text = '';
+            let reason = '';
+
+            if (vixValue <= thresholds.vixGreen && fngValue >= thresholds.fngGreen) {
+                color = 'gruen';
+                text = '🟢 Kaufsignal';
+                reason = 'VIX niedrig & Fear & Greed hoch';
+            } else if (vixValue >= thresholds.vixYellow || fngValue <= thresholds.fngYellow) {
+                color = 'rot';
+                text = '🔴 Verkaufssignal';
+                reason = vixValue >= thresholds.vixYellow ? 'VIX zu hoch' : 'Fear & Greed zu niedrig';
+            } else {
+                color = 'gelb';
+                text = '🟡 Vorsicht';
+                reason = 'Neutrale Marktstimmung';
+            }
+
+            document.getElementById(`ampel-${color}`).className = `ampel-light ampel-${color} pulse`;
+            document.getElementById('ampel-text').textContent = text;
+            document.getElementById('ampel-reason').textContent = reason;
+        }
+
+        // Prüfe, ob automatische Aktualisierung erlaubt ist (8-22 Uhr Deutschland)
+        function shouldAutoUpdate() {
+            const now = new Date();
+            const hour = now.getHours();
+            // 8-22 Uhr in Deutschland (MEZ/MESZ)
+            return hour >= 8 && hour < 22;
+        }
+
+        // Automatische Aktualisierung alle 60 Minuten, aber nur zwischen 8-22 Uhr
+        function startAutoUpdate() {
+            // Sofort laden beim Start
+            loadThresholds();
+            loadAllData();
+            
+            // Alle 60 Minuten prüfen
+            setInterval(() => {
+                if (shouldAutoUpdate()) {
+                    loadAllData();
+                }
+            }, 60 * 60 * 1000);
+        }
+
+        // Initial laden
+        document.addEventListener('DOMContentLoaded', startAutoUpdate);
+    </script>
+
+    <!-- PWA Manifest (inline) -->
+    <script>
+        const manifest = {
+            "name": "Börsenampel",
+            "short_name": "Börsenampel",
+            "description": "Echtzeit-Marktcheck mit Ampel-System und Live-Daten von Twelve Data und CNN",
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#1e293b",
+            "theme_color": "#3b82f6",
+            "icons": [{
+                "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTUwIDMwUzMwIDUwVjMwUzMwIDMwVjUwSDUwVjMwVjUwSDUwVjMwUzUwIDMwVjUwSDUwVjMwVjUwUzMwIDUwSDUwVjMwIiBmaWxsPSIjMzc0MTExIi8+PC9zdmc+",
+                "sizes": "100x100",
+                "type": "image/svg+xml",
+                "purpose": "any maskable"
+            }]
+        };
+        const link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
+        document.head.appendChild(link);
+    </script>
+</body>
+</html>
