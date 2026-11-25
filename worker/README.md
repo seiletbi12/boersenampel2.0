@@ -1,9 +1,10 @@
-# Börsenampel Worker (`boersenampelproxyy`)
+# Börsenampel Worker (`boersenampelproxyy2`)
 
 Cloudflare Worker, der die Daten für die Börsenampel-Progressive-Web-App aggregiert.
-Deploy auf den **bestehenden** Worker-Namen – die URL
-`https://boersenampelproxyy.tobseil87.workers.dev/` bleibt gleich, das Frontend
-(`WORKER_URL` in `index.html`) muss nicht geändert werden.
+Dies ist ein **neuer, eigener Worker** – der alte Worker `boersenampelproxyy`
+bleibt unberührt, die bestehende Ampel läuft damit weiter. Neue URL:
+`https://boersenampelproxyy2.tobseil87.workers.dev/`
+(Frontend: `WORKER_URL` in `boersenampel-main/index.html` zeigt auf die neue URL.)
 
 ## Datenquellen
 
@@ -30,17 +31,23 @@ liefert HTML statt JSON an Cloudflare-IPs), liefern die anderen Felder trotzdem.
 
 `errors` ist nur vorhanden, wenn mindestens eine Quelle fehlgeschlagen ist.
 
-## Deploy
+## Deploy (neuen Worker anlegen)
 
 ```bash
 cd worker
 npx wrangler login
 npx wrangler secret put TWELVE_DATA_API_KEY   # einmalig, Key aus dem Twelve-Data-Dashboard
-npx wrangler deploy                            # aktualisiert boersenampelproxyy
+npx wrangler deploy                            # legt boersenampelproxyy2 neu an
 ```
 
-Danach Smoke-Test:
+Danach Smoke-Test (neue Worker-URL):
 
-```bash
-curl -s "https://boersenampelproxyy.tobseil87.workers.dev/?cachebuster=$(date +%s)" | jq .
 ```
+https://boersenampelproxyy2.tobseil87.workers.dev/?cachebuster=123
+```
+
+## Rollback
+
+Alten Worker `boersenampelproxyy` einfach weiterlaufen lassen bzw. im Frontend
+`WORKER_URL` wieder auf die alte URL setzen – der alte Code ist im
+Cloudflare-Dashboard weiterhin hinterlegt.
