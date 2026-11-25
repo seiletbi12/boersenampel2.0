@@ -11,7 +11,9 @@ bleibt unberührt, die bestehende Ampel läuft damit weiter. Neue URL:
 | Feld im Payload | Quelle | Key nötig |
 | --- | --- | --- |
 | `sp500` (SPY ETF) | Twelve Data Quote API | ja (`TWELVE_DATA_API_KEY`) |
-| `vix` (^VIX) | CBOE CDN (`cdn.cboe.com/.../_VIX.json`), Fallback: Twelve Data `VIXY` | nein (Fallback: ja) |
+| `vix` (^VIX) | Kette: CBOE CDN → Yahoo Chart API → FMP (`^VIX`, optional) → Twelve Data `VIXY`. `source` im Payload zeigt, welche Quelle gewonnen hat | FMP/Twelve optional (`FMP_API_KEY` / `TWELVE_DATA_API_KEY`) |
+
+Hinweis: CBOE blockiert Datacenter-/Cloudflare-IPs teils mit 403 und liefert bei 200 manchmal unsauberes JSON (rohe Steuerzeichen) – der Worker parst daher als Text und faengt beides ab. Yahoo wird von Cloudflare-IPs oft mit 429 blockiert. Deshalb die Kette; ohne Keys bleibt Twelve Data `VIXY` als letzter Fallback.
 | `fearGreed` | CNN (`production.dataviz.cnn.io`), Fallback: `api.alternative.me/fng` | nein |
 
 Jede Quelle läuft in eigener Fehlerbehandlung: Blockiert eine Quelle (z. B. CNN
@@ -37,6 +39,7 @@ liefert HTML statt JSON an Cloudflare-IPs), liefern die anderen Felder trotzdem.
 cd worker
 npx wrangler login
 npx wrangler secret put TWELVE_DATA_API_KEY   # einmalig, Key aus dem Twelve-Data-Dashboard
+npx wrangler secret put FMP_API_KEY            # optional, fuer echten ^VIX via FMP (kostenloser Key)
 npx wrangler deploy                            # legt boersenampelproxyy2 neu an
 ```
 
